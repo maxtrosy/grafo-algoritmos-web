@@ -1,0 +1,483 @@
+/* Importar fuentes SF Pro - Usadas por Apple */
+@import url('https://fonts.cdnjs.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.cdnjs.com/css2?family=SF+Pro+Text:wght@300;400;500;600&display=swap');
+
+/* Reseteo y estilos base */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Estilos generales */
+body {
+  font-family: 'SF Pro Display', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background-color: #000; /* Fondo negro para el contraste inicial */
+  color: #fff;
+  overflow-x: hidden;
+  transition: background-color 1s cubic-bezier(0.215, 0.61, 0.355, 1);
+}
+
+body.content-loaded {
+  background-color: #fbfbfd;
+  color: #1d1d1f;
+}
+
+/* Splash Screen con efecto cinemático */
+.splash-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  overflow: hidden; /* Para contener el video y efectos */
+}
+
+/* Video de fondo al estilo Apple */
+.splash-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: -1;
+}
+
+.splash-background::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at center, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.8) 100%);
+  z-index: 1;
+}
+
+.background-video {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  min-width: 100%;
+  min-height: 100%;
+  width: auto;
+  height: auto;
+  transform: translateX(-50%) translateY(-50%);
+  opacity: 0;
+  animation: fadeVideo 2s cubic-bezier(0.215, 0.61, 0.355, 1) forwards 0.5s;
+}
+
+@keyframes fadeVideo {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0.7;
+  }
+}
+
+/* Contenedor con efecto de revelado */
+.splash-container {
+  position: relative;
+  width: 100%;
+  max-width: 1200px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  perspective: 1000px;
+}
+
+.splash-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 800px;
+  padding: 40px;
+  transform-style: preserve-3d;
+}
+
+/* Logo (opcional) */
+.apple-logo {
+  width: 60px;
+  height: 60px;
+  margin-bottom: 30px;
+  opacity: 0;
+  animation: zoomInLogo 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) forwards;
+}
+
+@keyframes zoomInLogo {
+  0% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Título principal con efecto cinemático */
+.splash-content h1 {
+  font-size: 76px;
+  font-weight: 600;
+  background: linear-gradient(90deg, #fff 0%, #d0d0d0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 30px;
+  letter-spacing: -0.015em;
+  line-height: 1.07143;
+  transform: translateZ(30px);
+  opacity: 0;
+  animation: revealTitle 1.8s cubic-bezier(0.215, 0.61, 0.355, 1) forwards 0.3s;
+}
+
+@keyframes revealTitle {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px) translateZ(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) translateZ(30px);
+  }
+}
+
+/* Línea divisoria animada al estilo Apple */
+.divider {
+  width: 0;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 50%, rgba(255,255,255,0) 100%);
+  margin: 10px 0 40px;
+  animation: expandDivider 2s cubic-bezier(0.215, 0.61, 0.355, 1) forwards 0.8s;
+}
+
+@keyframes expandDivider {
+  0% {
+    width: 0;
+  }
+  100% {
+    width: 120px;
+  }
+}
+
+/* Descripción del proyecto con efecto parallax */
+.splash-content > p {
+  font-size: 24px;
+  max-width: 700px;
+  margin-bottom: 50px;
+  color: rgba(255,255,255,0.85);
+  line-height: 1.47059;
+  font-weight: 300;
+  letter-spacing: 0.0107em;
+  transform: translateZ(20px);
+  opacity: 0;
+  animation: revealDesc 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) forwards 1.2s;
+}
+
+@keyframes revealDesc {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) translateZ(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) translateZ(20px);
+  }
+}
+
+/* Identifications con efecto de vidrio esmerilado */
+.identifications {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto 50px;
+  padding: 30px 40px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 24px;
+  transform: translateZ(10px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  animation: revealCard 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) forwards 1.6s;
+}
+
+@keyframes revealCard {
+  0% {
+    opacity: 0;
+    transform: translateY(30px) translateZ(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) translateZ(10px);
+  }
+}
+
+.identifications p {
+  font-size: 17px;
+  line-height: 1.47059;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 12px;
+  text-align: left;
+}
+
+.identifications p:first-child {
+  color: #fff;
+  font-weight: 500;
+  margin-bottom: 16px;
+}
+
+/* Ilustración con efecto de brillo */
+.illustration-container {
+  position: relative;
+  margin: 30px 0;
+  opacity: 0;
+  transform: translateZ(40px);
+  animation: floatIn 2s cubic-bezier(0.215, 0.61, 0.355, 1) forwards 2s;
+}
+
+@keyframes floatIn {
+  0% {
+    opacity: 0;
+    transform: translateY(40px) translateZ(40px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) translateZ(40px);
+  }
+}
+
+.illustration {
+  width: 320px;
+  height: auto;
+  border-radius: 12px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+}
+
+/* Efecto de brillo en la ilustración */
+.illustration-container::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: shine 3s infinite alternate cubic-bezier(0.455, 0.03, 0.515, 0.955);
+  border-radius: 12px;
+}
+
+@keyframes shine {
+  0% {
+    opacity: 0;
+    transform: translateX(-100%) translateY(-100%) rotate(45deg);
+  }
+  20%, 100% {
+    opacity: 0.5;
+    transform: translateX(100%) translateY(100%) rotate(45deg);
+  }
+}
+
+/* Botón con efecto de brillo */
+button {
+  position: relative;
+  min-width: 180px;
+  padding: 16px 28px;
+  font-size: 19px;
+  background: linear-gradient(135deg, #0071e3 0%, #42a1ec 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 30px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.215, 0.61, 0.355, 1);
+  font-weight: 500;
+  text-align: center;
+  transform: translateZ(15px);
+  opacity: 0;
+  animation: fadeButton 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) forwards 2.4s;
+  box-shadow: 0 15px 30px rgba(0, 113, 227, 0.3);
+}
+
+@keyframes fadeButton {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) translateZ(15px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) translateZ(15px);
+  }
+}
+
+/* Efecto de brillo en el botón */
+button::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    to bottom right,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  transform: rotate(45deg);
+  animation: buttonShine 3s infinite cubic-bezier(0.455, 0.03, 0.515, 0.955);
+}
+
+@keyframes buttonShine {
+  0% {
+    transform: translateX(-100%) translateY(-100%) rotate(45deg);
+  }
+  100% {
+    transform: translateX(100%) translateY(100%) rotate(45deg);
+  }
+}
+
+/* Efectos hover y active del botón */
+button:hover {
+  background: linear-gradient(135deg, #0077ed 0%, #55b9ff 100%);
+  transform: translateY(-2px) translateZ(15px);
+  box-shadow: 0 20px 40px rgba(0, 113, 227, 0.4);
+}
+
+button:active {
+  transform: scale(0.98) translateZ(15px);
+  background: linear-gradient(135deg, #0068d1 0%, #329bf3 100%);
+  box-shadow: 0 10px 20px rgba(0, 113, 227, 0.3);
+}
+
+/* Efecto de transición entre pantallas */
+.transition-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #fbfbfd;
+  z-index: 200;
+  transform: translateY(100%);
+  transition: transform 0.8s cubic-bezier(0.7, 0, 0.3, 1);
+}
+
+body.navigating .transition-overlay {
+  transform: translateY(0);
+}
+
+/* Contenido principal después del splash */
+.main-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  text-align: center;
+  animation: fadeMainContent 1s cubic-bezier(0.215, 0.61, 0.355, 1);
+  min-height: 100vh;
+}
+
+@keyframes fadeMainContent {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.main-content h2 {
+  font-size: 48px;
+  font-weight: 600;
+  color: #1d1d1f;
+  margin-bottom: 40px;
+  letter-spacing: -0.015em;
+  line-height: 1.1;
+}
+
+/* Efecto parallax al hacer scroll (para el contenido principal) */
+.parallax-element {
+  transition: transform 0.3s cubic-bezier(0.215, 0.61, 0.355, 1);
+}
+
+/* Responsive Design */
+@media (max-width: 992px) {
+  .splash-content h1 {
+    font-size: 60px;
+  }
+  
+  .splash-content > p {
+    font-size: 22px;
+  }
+}
+
+@media (max-width: 768px) {
+  .splash-content h1 {
+    font-size: 48px;
+  }
+  
+  .splash-content > p {
+    font-size: 20px;
+  }
+  
+  .identifications {
+    padding: 25px;
+  }
+  
+  .main-content h2 {
+    font-size: 38px;
+  }
+  
+  .illustration {
+    width: 280px;
+  }
+}
+
+@media (max-width: 480px) {
+  .splash-content h1 {
+    font-size: 38px;
+  }
+  
+  .splash-content > p {
+    font-size: 18px;
+  }
+  
+  .identifications {
+    padding: 20px;
+  }
+  
+  .identifications p {
+    font-size: 15px;
+  }
+  
+  .main-content h2 {
+    font-size: 28px;
+  }
+  
+  .illustration {
+    width: 240px;
+  }
+  
+  button {
+    min-width: 160px;
+    padding: 14px 24px;
+    font-size: 17px;
+  }
+}
