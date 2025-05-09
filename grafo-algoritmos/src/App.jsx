@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import './App.css';
+import Home from './pages/Home';
 
 // Componente SplashScreen
 const SplashScreen = ({ onFinish }) => {
@@ -12,36 +14,46 @@ const SplashScreen = ({ onFinish }) => {
           <p>Desarrollado por:</p>
           <p>Integrante 1: Zahir Acosta De La Asunción</p>
           <p>Integrante 2: María Isabel Gutiérrez Gonzalez</p>
-        
         </div>
-        
         <button onClick={onFinish}>Iniciar</button>
       </div>
     </div>
   );
 };
 
-// Componente principal de la aplicación
+// Componente principal de contenido después del Splash
+const MainContent = () => {
+  const navigate = useNavigate();
+
+  return (
+    <div className="main-content">
+      <h2>Bienvenido a la Aplicación de Algoritmos de Grafos</h2>
+      <button onClick={() => navigate('/home')}>Ir a la página siguiente</button>
+    </div>
+  );
+};
+
+// Componente principal App con rutas
 const App = () => {
   const [showSplash, setShowSplash] = useState(true);
 
   const handleSplashFinish = () => {
-    setShowSplash(false); // Oculta el Splash Screen
+    setShowSplash(false);
   };
 
   return (
-    <div>
-      {showSplash ? (
-        <SplashScreen onFinish={handleSplashFinish} />
-      ) : (
-        <div className="main-content">
-          <h2>Bienvenido a la Aplicación de Algoritmos de Grafos</h2>
-          <button onClick={() => alert('Navegar a la siguiente página')}>
-            Ir a la página siguiente
-          </button>
-        </div>
-      )}
-    </div>
+    <Router>
+      <Routes>
+        {showSplash ? (
+          <Route path="*" element={<SplashScreen onFinish={handleSplashFinish} />} />
+        ) : (
+          <>
+            <Route path="/" element={<MainContent />} />
+            <Route path="/home" element={<Home />} />
+          </>
+        )}
+      </Routes>
+    </Router>
   );
 };
 
