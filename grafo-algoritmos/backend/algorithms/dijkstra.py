@@ -1,25 +1,30 @@
-import heapq
-
-def dijkstra(graph, start):
-    # Inicialización de las distancias y la cola de prioridad
-    distances = {node: float('inf') for node in graph}
+def dijkstra(matrix, start):
+    n = len(matrix)
+    distances = [float('inf')] * n
     distances[start] = 0
+    visited = [False] * n
     pq = [(0, start)]  # (distancia, nodo)
 
     while pq:
         current_distance, current_node = heapq.heappop(pq)
 
-        # Si la distancia es mayor a la que ya tenemos, ignoramos
-        if current_distance > distances[current_node]:
+        if visited[current_node]:
             continue
+        visited[current_node] = True
 
-        # Recorremos los vecinos del nodo actual
-        for neighbor, weight in graph[current_node].items():
-            distance = current_distance + weight
+        for neighbor in range(n):
+            weight = matrix[current_node][neighbor]
+            if weight > 0:  # Si hay conexión
+                distance = current_distance + weight
+                if distance < distances[neighbor]:
+                    distances[neighbor] = distance
+                    heapq.heappush(pq, (distance, neighbor))
 
-            # Si encontramos una distancia más corta, actualizamos
-            if distance < distances[neighbor]:
-                distances[neighbor] = distance
-                heapq.heappush(pq, (distance, neighbor))
-
-    return distances
+    # Para mantener la consistencia con otros algoritmos (lista de nodos en orden visitado)
+    # Se puede devolver solo el orden de visita o los valores finales
+    # Aquí devolvemos el orden de visita (como lo espera tu frontend):
+    result = []
+    for i, d in sorted(enumerate(distances), key=lambda x: x[1]):
+        if d != float('inf'):
+            result.append(i)
+    return result

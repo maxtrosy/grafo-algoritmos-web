@@ -9,15 +9,18 @@
 }
 
 /* Estilos generales */
+/* Añade esto al inicio de tu CSS */
+html {
+  transform: scale(0.75);          /* Escala todo al 75% */
+  transform-origin: top left;      /* Origen de la transformación */
+  width: 133.33%;                 /* Compensa el espacio reducido (100%/0.75) */
+  height: 133.33%;
+  overflow-x: hidden;             /* Evita barras de dessplazamiento no deseadas */
+}
+
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-  margin: 0;
-  padding: 0;
+  width: 100%;
   min-height: 100vh;
-  background-color: #000; /* Fondo negro para el contraste inicial */
-  color: #fff;
-  overflow-x: hidden;
-  transition: background-color 1s cubic-bezier(0.215, 0.61, 0.355, 1);
 }
 
 
@@ -418,35 +421,45 @@ body.navigating .transition-overlay {
 }
 
 /* Responsive Design */
-@media (max-width: 992px) {
+/* Modifica tus media queries existentes */
+@media (max-width: 1600px) { /* Nueva breakpoint para pantallas grandes */
   .splash-content h1 {
-    font-size: 60px;
-  }
-  
-  .splash-content > p {
-    font-size: 22px;
-  }
-}
-
-@media (max-width: 768px) {
-  .splash-content h1 {
-    font-size: 48px;
+    font-size: 64px;
   }
   
   .splash-content > p {
     font-size: 20px;
   }
   
-  .identifications {
-    padding: 25px;
-  }
-  
-  .main-content h2 {
-    font-size: 38px;
-  }
-  
   .illustration {
     width: 280px;
+  }
+}
+
+/* Y ajusta las demás breakpoints en consecuencia */
+
+/* Añade esto al inicio de tu CSS */
+html {
+  font-size: 14px;
+}
+
+/* Luego ajusta los elementos más grandes específicamente */
+.splash-content h1 {
+  font-size: 4.5rem; /* 63px (14px * 4.5) en lugar de 76px */
+}
+
+.splash-content > p {
+  font-size: 1.5rem; /* 21px */
+}
+
+.illustration {
+  width: 22rem; /* 308px */
+}
+
+/* Ajusta las media queries para que usen rem también */
+@media (max-width: 992px) {
+  .splash-content h1 {
+    font-size: 3.5rem;
   }
 }
 

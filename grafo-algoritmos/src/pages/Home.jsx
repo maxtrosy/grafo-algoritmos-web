@@ -8,9 +8,13 @@ const GraphVisualizer = () => {
   const [steps, setSteps] = useState([]);
   const [matrix, setMatrix] = useState([]);
   const [nodePositions, setNodePositions] = useState([]);
+  const [nodeLabels, setNodeLabels] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [startNode, setStartNode] = useState(0);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [visitedNodes, setVisitedNodes] = useState([]);
+  const [executionHistory, setExecutionHistory] = useState([]);
 
   // Parse adjacency matrix with enhanced validation
   const parseAdjacencyMatrix = useCallback((text) => {
@@ -23,36 +27,72 @@ const GraphVisualizer = () => {
         .trim()
         .split('\n')
         .filter(line => line.trim().length > 0);
-      
+
       if (lines.length === 0) {
         throw new Error('El archivo está vacío');
       }
 
-      const matrix = lines.map((line, i) => {
-        const values = line.trim().split(/\s+/);
-        return values.map((val, j) => {
-          const num = Number(val);
-          if (isNaN(num)) {
-            throw new Error(`Valor no numérico en fila ${i+1}, columna ${j+1}: ${val}`);
-          }
-          return num;
-        });
-      });
-      
-      // Validate square matrix
-      const n = matrix.length;
-      if (!matrix.every(row => row.length === n)) {
-        throw new Error('La matriz de adyacencia debe ser cuadrada');
-      }
+      // Check if first line contains letters (header row)
+      const firstLineParts = lines[0].trim().split(/\s+/).filter(Boolean);
+      const hasLetterHeaders = /[A-Za-z]/.test(firstLineParts[0]);
 
-      return matrix;
+      if (hasLetterHeaders) {
+        // Parse matrix with letter headers
+        const nodeLabels = firstLineParts.slice(0);
+        const matrix = [];
+
+        for (let i = 1; i < lines.length; i++) {
+          const values = lines[i].trim().split(/\s+/).filter(Boolean);
+          const rowLabel = values[0];
+
+          if (rowLabel !== nodeLabels[i - 1]) {
+            throw new Error(`Encabezado de fila no coincide: esperado ${nodeLabels[i - 1]}, obtenido ${rowLabel}`);
+          }
+
+          const rowValues = values.slice(1).map((val, j) => {
+            const num = Number(val);
+            if (isNaN(num)) {
+              throw new Error(`Valor no numérico en fila ${i + 1}, columna ${j + 1}: ${val}`);
+            }
+            return num;
+          });
+
+          matrix.push(rowValues);
+        }
+
+        const n = matrix.length;
+        if (n === 0 || !matrix.every(row => row.length === n)) {
+          throw new Error('La matriz de adyacencia debe ser cuadrada');
+        }
+
+        return { matrix, nodeLabels };
+      } else {
+        // Parse simple numeric matrix
+        const matrix = lines.map((line, i) => {
+          const values = line.trim().split(/\s+/).filter(Boolean);
+          return values.map((val, j) => {
+            const num = Number(val);
+            if (isNaN(num)) {
+              throw new Error(`Valor no numérico en fila ${i + 1}, columna ${j + 1}: ${val}`);
+            }
+            return num;
+          });
+        });
+
+        const n = matrix.length;
+        if (n === 0 || !matrix.every(row => row.length === n)) {
+          throw new Error('La matriz de adyacencia debe ser cuadrada');
+        }
+
+        return { matrix, nodeLabels: Array.from({ length: n }, (_, i) => i.toString()) };
+      }
     } catch (error) {
       setError(error.message);
       return null;
     }
   }, []);
 
-  // Handle file upload with robust error handling
+  // Handle file upload
   const handleFileUpload = useCallback((e) => {
     try {
       setError(null);
@@ -72,13 +112,18 @@ const GraphVisualizer = () => {
             throw new Error('Error al leer el contenido del archivo');
           }
 
-          const parsedMatrix = parseAdjacencyMatrix(content);
-          if (!parsedMatrix) return;
+          const parsedData = parseAdjacencyMatrix(content);
+          if (!parsedData) return;
 
           setGraphInput(content);
-          setMatrix(parsedMatrix);
-          calculateNodePositions(parsedMatrix.length);
+          setMatrix(parsedData.matrix);
+          setNodeLabels(parsedData.nodeLabels);
+          calculateNodePositions(parsedData.matrix.length);
           setSteps([]);
+          setCurrentStep(0);
+          setVisitedNodes([]);
+          setExecutionHistory([]);
+          setStartNode(0);
         } catch (err) {
           setError(err.message);
         }
@@ -94,7 +139,7 @@ const GraphVisualizer = () => {
     }
   }, [parseAdjacencyMatrix]);
 
-  // Calculate node positions with circular layout
+  // Calculate node positions
   const calculateNodePositions = useCallback((nodeCount) => {
     try {
       if (!nodeCount || nodeCount <= 0) return;
@@ -118,10 +163,9 @@ const GraphVisualizer = () => {
     }
   }, []);
 
-  // Run algorithm with comprehensive error handling
+  // Run algorithm
   const handleRunAlgorithm = async () => {
     try {
-      // Validate inputs
       if (!matrix || matrix.length === 0) {
         throw new Error('No hay matriz válida cargada');
       }
@@ -136,7 +180,10 @@ const GraphVisualizer = () => {
 
       setIsLoading(true);
       setError(null);
-      
+      setCurrentStep(0);
+      setVisitedNodes([]);
+      setExecutionHistory([]);
+
       const response = await fetch(`http://localhost:5000/run_${selectedAlgorithm}`, {
         method: 'POST',
         headers: {
@@ -155,7 +202,6 @@ const GraphVisualizer = () => {
 
       const data = await response.json();
       
-      // Validate and format response
       if (!data.result && !data.steps) {
         throw new Error('Formato de respuesta inválido del servidor');
       }
@@ -165,12 +211,17 @@ const GraphVisualizer = () => {
         throw new Error('El resultado debe ser un array');
       }
 
-      // Format steps for display
-      const formattedSteps = result.map((node, index) => 
-        `Paso ${index + 1}: Visitar nodo ${node}`
+      const formattedSteps = result.map((nodeIndex, index) =>
+        `Paso ${index + 1}: Visitar nodo ${nodeLabels[nodeIndex] || nodeIndex}`
       );
-      
+
       setSteps(formattedSteps);
+      setVisitedNodes(result);
+      setExecutionHistory(result.map((node, index) => ({
+        step: index,
+        currentNode: node,
+        visitedNodes: result.slice(0, index + 1)
+      })));
     } catch (error) {
       setError(error.message);
       console.error('Error en handleRunAlgorithm:', error);
@@ -179,14 +230,41 @@ const GraphVisualizer = () => {
     }
   };
 
-  // Reset steps when matrix changes
+  // Navigation functions
+  const handleNextStep = () => {
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const handlePrevStep = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const jumpToStep = (stepIndex) => {
+    if (stepIndex >= 0 && stepIndex < steps.length) {
+      setCurrentStep(stepIndex);
+    }
+  };
+
+  // Get current node information
+  const getCurrentNode = () => {
+    if (visitedNodes.length === 0 || currentStep >= visitedNodes.length) return null;
+    return visitedNodes[currentStep];
+  };
+
+  // Reset when matrix changes
   useEffect(() => {
     setSteps([]);
+    setCurrentStep(0);
+    setVisitedNodes([]);
+    setExecutionHistory([]);
   }, [matrix]);
 
-  // Render the component
   return (
-    <div className="main-content">
+    <div className="graph-visualizer-app">
       <h2>Visualizador de Algoritmos de Grafos</h2>
 
       {error && (
@@ -233,20 +311,23 @@ const GraphVisualizer = () => {
           {matrix.length > 0 && (
             <div className="start-node-selector">
               <label htmlFor="startNode">Nodo inicial:</label>
-              <input
-                type="number"
+              <select
                 id="startNode"
-                min="0"
-                max={matrix.length - 1}
                 value={startNode}
-                onChange={(e) => setStartNode(Math.min(Math.max(0, parseInt(e.target.value) || 0), matrix.length - 1))}
+                onChange={(e) => setStartNode(parseInt(e.target.value))}
                 disabled={isLoading}
-              />
+              >
+                {nodeLabels.map((label, index) => (
+                  <option key={index} value={index}>
+                    {label} (Nodo {index})
+                  </option>
+                ))}
+              </select>
             </div>
           )}
         </div>
 
-        <button 
+        <button
           className={`run-button ${isLoading ? 'loading' : ''}`}
           onClick={handleRunAlgorithm}
           disabled={isLoading || matrix.length === 0 || !selectedAlgorithm}
@@ -262,42 +343,54 @@ const GraphVisualizer = () => {
         </button>
       </div>
 
-      {matrix.length > 0 && (
-        <div className="visualization-section">
-          <div className="visualization-container">
-            <h3>Visualización del Grafo</h3>
-            <div className="graph-visualization">
-              <svg width="600" height="600" viewBox="0 0 600 600">
-                {/* Render edges */}
-                {matrix.map((row, i) => 
-                  row.slice(i + 1).map((weight, j) => {
-                    const actualJ = i + 1 + j;
-                    if (weight > 0 && nodePositions[i] && nodePositions[actualJ]) {
-                      return (
-                        <line 
-                          key={`edge-${i}-${actualJ}`}
-                          x1={nodePositions[i].x}
-                          y1={nodePositions[i].y}
-                          x2={nodePositions[actualJ].x}
-                          y2={nodePositions[actualJ].y}
-                          stroke="#42a1ec"
-                          strokeWidth={Math.min(weight * 0.5 + 1, 5)}
-                          strokeOpacity="0.7"
-                        />
-                      );
-                    }
-                    return null;
-                  })
-                ).flat().filter(Boolean)}
+      <div className="visualization-container">
+        <div className="graph-section">
+          <h3>Visualización del Grafo</h3>
+          <div className="graph-visualization">
+            <svg width="100%" height="400" viewBox="0 0 600 600">
+              {/* Render edges */}
+              {matrix.map((row, i) =>
+                row.slice(i + 1).map((weight, j) => {
+                  const actualJ = i + 1 + j;
+                  if (weight > 0 && nodePositions[i] && nodePositions[actualJ]) {
+                    return (
+                      <line
+                        key={`edge-${i}-${actualJ}`}
+                        x1={nodePositions[i].x}
+                        y1={nodePositions[i].y}
+                        x2={nodePositions[actualJ].x}
+                        y2={nodePositions[actualJ].y}
+                        stroke="#42a1ec"
+                        strokeWidth={Math.min(weight * 0.5 + 1, 5)}
+                        strokeOpacity="0.7"
+                      />
+                    );
+                  }
+                  return null;
+                })
+              ).flat().filter(Boolean)}
+
+              {/* Render nodes with dynamic coloring */}
+              {nodePositions.map((pos, i) => {
+                const isCurrentNode = getCurrentNode() === i;
+                const wasVisited = visitedNodes.slice(0, currentStep).includes(i);
                 
-                {/* Render nodes */}
-                {nodePositions.map((pos, i) => (
+                let fillColor;
+                if (isCurrentNode) {
+                  fillColor = "#ff5722"; // Current node - orange
+                } else if (wasVisited) {
+                  fillColor = "#4caf50"; // Visited nodes - green
+                } else {
+                  fillColor = "#0071e3"; // Unvisited nodes - blue
+                }
+
+                return (
                   <g key={`node-${i}`}>
                     <circle
                       cx={pos.x}
                       cy={pos.y}
                       r="20"
-                      fill={steps.some(step => step.includes(`nodo ${i}`)) ? "#ff5722" : "#0071e3"}
+                      fill={fillColor}
                       stroke="#ffffff"
                       strokeWidth="2"
                     />
@@ -310,59 +403,118 @@ const GraphVisualizer = () => {
                       fontSize="14"
                       fontWeight="bold"
                     >
-                      {i}
+                      {nodeLabels[i] || i}
                     </text>
                   </g>
-                ))}
-              </svg>
-            </div>
+                );
+              })}
+            </svg>
           </div>
+          {/* Current node display */}
+          <div className="current-node-display">
+            {getCurrentNode() !== null && (
+              <p>Nodo actual: <strong>{nodeLabels[getCurrentNode()] || getCurrentNode()}</strong></p>
+            )}
+          </div>
+          {/* Step navigation controls */}
+          {steps.length > 0 && (
+            <div className="step-navigation">
+              <button 
+                onClick={handlePrevStep}
+                disabled={currentStep === 0 || isLoading}
+                className="nav-button prev-button"
+              >
+                Anterior
+              </button>
+              <input
+                type="range"
+                min="0"
+                max={steps.length - 1}
+                value={currentStep}
+                onChange={(e) => jumpToStep(parseInt(e.target.value))}
+                className="step-slider"
+              />
+              <button 
+                onClick={handleNextStep}
+                disabled={currentStep === steps.length - 1 || isLoading}
+                className="nav-button next-button"
+              >
+                Siguiente
+              </button>
+              <span className="step-counter">
+                Paso {currentStep + 1} de {steps.length}
+              </span>
+            </div>
+          )}
+        </div>
 
+        <div className="matrix-section">
+          <h3>Matriz de Adyacencia</h3>
           <div className="matrix-display">
-            <h3>Matriz de Adyacencia</h3>
-            <div className="matrix-container">
-              <table>
-                <tbody>
-                  {matrix.map((row, i) => (
-                    <tr key={i}>
-                      {row.map((cell, j) => (
-                        <td 
-                          key={j} 
-                          className={cell > 0 ? 'connected' : ''}
-                          data-start={i === startNode || j === startNode}
-                        >
-                          {cell}
-                        </td>
-                      ))}
-                    </tr>
+            <table>
+              <thead>
+                <tr>
+                  <th></th>
+                  {nodeLabels.map((label, index) => (
+                    <th key={index}>{label}</th>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </tr>
+              </thead>
+              <tbody>
+                {matrix.map((row, i) => (
+                  <tr key={i}>
+                    <td><strong>{nodeLabels[i]}</strong></td>
+                    {row.map((cell, j) => (
+                      <td
+                        key={j}
+                        className={cell > 0 ? 'connected' : ''}
+                        data-start={i === startNode || j === startNode}
+                        data-current={getCurrentNode() === i || getCurrentNode() === j}
+                      >
+                        {cell}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
-      )}
 
-      {steps.length > 0 && (
         <div className="results-section">
-          <h3>Resultados del {selectedAlgorithm.toUpperCase()}</h3>
-          <div className="algorithm-steps">
-            <h4>Orden de visita:</h4>
-            <div className="visit-order">
-              {steps.map(step => step.match(/\d+$/)[0]).join(' → ')}
-            </div>
-            <h4>Detalle de pasos:</h4>
-            <ol className="steps-list">
-              {steps.map((step, idx) => (
-                <li key={idx}>
-                  <span className="step-number">{idx + 1}.</span>
-                  <span className="step-description">{step}</span>
-                </li>
-              ))}
-            </ol>
-          </div>
+          {steps.length > 0 && (
+            <>
+              <h3>Resultados del {selectedAlgorithm.toUpperCase()}</h3>
+              
+              <div className="algorithm-steps">
+                <h4>Orden de visita:</h4>
+                <div className="visit-order">
+                  {steps.slice(0, currentStep + 1).map(step => {
+                    const node = step.split(':')[1].trim().split(' ')[2];
+                    return node;
+                  }).join(' → ')}
+                </div>
+                <h4>Detalle de pasos:</h4>
+                <ol className="steps-list">
+                  {steps.map((step, idx) => (
+                    <li 
+                      key={idx}
+                      className={idx === currentStep ? 'active-step' : ''}
+                      onClick={() => jumpToStep(idx)}
+                    >
+                      <span className="step-number">{idx + 1}.</span>
+                      <span className="step-description">{step}</span>
+                      
+                    </li>
+
+                    
+                  ))}
+                </ol>
+              </div>
+            </>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };
