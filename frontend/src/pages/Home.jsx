@@ -107,8 +107,7 @@ const GraphVisualizer = () => {
     }
   }, []);
 
-
-  const API_BASE_URL = 'https://tu-backend-en-render.com';
+  const API_BASE_URL = 'https://grafo-algoritmos-web.onrender.com';
 
 
   const handleRunAlgorithm = async () => {
