@@ -7,7 +7,7 @@ from algorithms.bfs import bfs
 from algorithms.dfs import dfs
 from algorithms.dijkstra import dijkstra
 from algorithms.kruskal import kruskal
-from algorithms.primp import prim
+from algorithms.prim import prim
 
 app = Flask(__name__)
 CORS(app)
@@ -138,46 +138,17 @@ def run_dfs():
         print(f"DFS Error: {str(e)}")
         return jsonify({"success": False, "error": "Internal server error"}), 500
 
-@app.route("/run_dijkstra", methods=["POST"])
-def run_dijkstra():
+@app.route('/run_dijkstra', methods=['POST'])
+def run_dijkstra_route():
     try:
         data = request.get_json()
-        
-        if not data or "matrix" not in data:
-            return jsonify({"error": "Missing 'matrix' in request"}), 400
-
-        # Check if matrix is in letter format
-        if isinstance(data["matrix"], str) and re.match(r'^[A-Z]', data["matrix"].strip().split('\n')[0].split()[0]):
-            matrix, nodes = parse_letter_matrix(data["matrix"])
-            start = convert_start_node(data.get("start", nodes[0]), nodes)
-        else:
-            matrix = data["matrix"]
-            nodes = list(range(len(matrix)))
-            start = data.get("start", 0)
-        
-        validate_graph_matrix(matrix)
-        
-        if start < 0 or start >= len(matrix):
-            raise ValueError(f"Start node must be between 0 and {len(matrix)-1}")
-
-        # Additional validation for Dijkstra (non-negative weights)
-        if any(weight < 0 for row in matrix for weight in row):
-            raise ValueError("Dijkstra's algorithm requires non-negative weights")
-
+        matrix = data['matrix']
+        start = data['start']
         result = dijkstra(matrix, start)
-        return jsonify({
-            "success": True,
-            "result": result,
-            "algorithm": "Dijkstra",
-            "start_node": nodes[start] if isinstance(data.get("start"), str) else start,
-            "node_labels": nodes
-        })
-
-    except ValueError as e:
-        return jsonify({"success": False, "error": str(e)}), 400
+        return jsonify(result)
     except Exception as e:
-        print(f"Dijkstra Error: {str(e)}")
-        return jsonify({"success": False, "error": "Internal server error"}), 500
+        print("Dijkstra Error:", e)
+        return jsonify({'error': str(e)}), 500
 
 @app.route("/run_kruskal", methods=["POST"])
 def run_kruskal():
@@ -187,21 +158,35 @@ def run_kruskal():
         if not data or "matrix" not in data:
             return jsonify({"error": "Missing 'matrix' in request"}), 400
 
-        # Check if matrix is in letter format
-        if isinstance(data["matrix"], str) and re.match(r'^[A-Z]', data["matrix"].strip().split('\n')[0].split()[0]):
-            matrix, nodes = parse_letter_matrix(data["matrix"])
+        # Procesa los nodos y la matriz
+        if isinstance(data["matrix"], str) and re.match(r'^[A-Za-z]', data["matrix"].strip().split('\n')[0].split()[0]):
+            matrix, node_labels = parse_letter_matrix(data["matrix"])
         else:
             matrix = data["matrix"]
-            nodes = list(range(len(matrix)))
-        
+            node_labels = list(range(len(matrix)))
+
         validate_graph_matrix(matrix)
 
-        result = kruskal(matrix)
+        # Convierte la matriz a lista de aristas para Kruskal
+        edges = []
+        n = len(matrix)
+        for i in range(n):
+            for j in range(i+1, n):
+                if matrix[i][j] > 0:
+                    edges.append((i, j, matrix[i][j]))
+
+        graph = {
+            'nodes': list(range(n)),
+            'edges': edges
+        }
+        kruskal_result = kruskal(graph)
+
         return jsonify({
             "success": True,
-            "result": result,
+            "mst": kruskal_result['mst'],
+            "totalWeight": kruskal_result['totalWeight'],
             "algorithm": "Kruskal",
-            "node_labels": nodes
+            "node_labels": node_labels
         })
 
     except ValueError as e:
@@ -210,35 +195,49 @@ def run_kruskal():
         print(f"Kruskal Error: {str(e)}")
         return jsonify({"success": False, "error": "Internal server error"}), 500
 
+    
 @app.route("/run_prim", methods=["POST"])
 def run_prim():
     try:
         data = request.get_json()
-        
+
         if not data or "matrix" not in data:
             return jsonify({"error": "Missing 'matrix' in request"}), 400
 
-        # Check if matrix is in letter format
-        if isinstance(data["matrix"], str) and re.match(r'^[A-Z]', data["matrix"].strip().split('\n')[0].split()[0]):
-            matrix, nodes = parse_letter_matrix(data["matrix"])
-            start = convert_start_node(data.get("start", nodes[0]), nodes)
+        if isinstance(data["matrix"], str) and re.match(r'^[A-Za-z]', data["matrix"].strip().split('\n')[0].split()[0]):
+            matrix, node_labels = parse_letter_matrix(data["matrix"])
+            start = convert_start_node(data.get("start", node_labels[0]), node_labels)
         else:
             matrix = data["matrix"]
-            nodes = list(range(len(matrix)))
+            node_labels = list(range(len(matrix)))
             start = data.get("start", 0)
-        
+
         validate_graph_matrix(matrix)
-        
+
         if start < 0 or start >= len(matrix):
             raise ValueError(f"Start node must be between 0 and {len(matrix)-1}")
 
-        result = prim(matrix, start)
+        edges = []
+        n = len(matrix)
+        for i in range(n):
+            for j in range(i+1, n):
+                if matrix[i][j] > 0:
+                    edges.append((i, j, matrix[i][j]))
+
+        graph = {
+            'nodes': list(range(n)),
+            'edges': edges
+        }
+        prim_result = prim(graph)
+
         return jsonify({
             "success": True,
-            "result": result,
+            "mst": prim_result['mst'],
+            "totalWeight": prim_result['totalWeight'],
             "algorithm": "Prim",
-            "start_node": nodes[start] if isinstance(data.get("start"), str) else start,
-            "node_labels": nodes
+            "start_node": node_labels[start],
+            "node_labels": node_labels,
+            "result": []  # <= Añade esto para evitar error en el front
         })
 
     except ValueError as e:
@@ -246,6 +245,7 @@ def run_prim():
     except Exception as e:
         print(f"Prim Error: {str(e)}")
         return jsonify({"success": False, "error": "Internal server error"}), 500
+
 
 if __name__ == "__main__":
     app.run(debug=True)

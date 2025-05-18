@@ -533,3 +533,90 @@ td.current-node-matrix {
     padding: 15px;
   }
 }
+/* ===================== */
+/* Sección tabla Dijkstra */
+/* ===================== */
+.dijkstra-table-section,
+.prim-table-section,
+.kruskal-table-section {
+  grid-column: 1 / -1; /* Ocupa todo el ancho de la grid */
+  background-color: var(--background-dark);
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  margin-top: 35px;
+  margin-bottom: 35px;
+  padding: 30px 24px 28px 24px;
+  text-align: center;
+  width: 100%;
+  display: block;
+}
+
+.dijkstra-table-section h3,
+.prim-table-section h3,
+.kruskal-table-section h3 {
+  color: var(--primary-color);
+  margin-bottom: 22px;
+  font-size: 1.5rem;
+}
+
+.dijkstra-table,
+.prim-table,
+.kruskal-table {
+  width: 100%;
+  margin: 0 auto;
+  border-collapse: collapse;
+  background-color: var(--background-light);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,113,227,0.12);
+  font-size: 1.04rem;
+}
+
+.dijkstra-table th, .dijkstra-table td,
+.prim-table th, .prim-table td,
+.kruskal-table th, .kruskal-table td {
+  padding: 16px 12px;
+  text-align: center;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.dijkstra-table th,
+.prim-table th,
+.kruskal-table th {
+  background-color: var(--primary-color);
+  color: #fff;
+  font-weight: 600;
+}
+
+.dijkstra-table tr:nth-child(even) td,
+.prim-table tr:nth-child(even) td,
+.kruskal-table tr:nth-child(even) td {
+  background-color: #24282f;
+}
+
+.dijkstra-table tr:hover td,
+.prim-table tr:hover td,
+.kruskal-table tr:hover td {
+  background-color: var(--primary-hover);
+  color: #fff;
+  transition: background 0.25s;
+}
+
+/* Responsive para las tablas */
+@media (max-width: 992px) {
+  .dijkstra-table-section,
+  .prim-table-section,
+  .kruskal-table-section {
+    padding: 15px 5px;
+    margin-top: 30px;
+    margin-bottom: 25px;
+  }
+  .dijkstra-table th, .dijkstra-table td,
+  .prim-table th, .prim-table td,
+  .kruskal-table th, .kruskal-table td {
+    padding: 10px 6px;
+    font-size: 0.97rem;
+  }
+}
+

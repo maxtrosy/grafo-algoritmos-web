@@ -7,7 +7,6 @@ def dfs(matrix, start):
         node = stack.pop()
         if node not in visited:
             visited.append(node)
-            # Agregar vecinos en orden inverso para simular DFS correctamente
             for neighbor in range(n - 1, -1, -1):
                 if matrix[node][neighbor] != 0 and neighbor not in visited:
                     stack.append(neighbor)

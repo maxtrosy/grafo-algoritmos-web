@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import './Home.css';
 
 const GraphVisualizer = () => {
-  // State management
   const [graphInput, setGraphInput] = useState('');
   const [selectedAlgorithm, setSelectedAlgorithm] = useState('');
   const [steps, setSteps] = useState([]);
@@ -15,75 +14,37 @@ const GraphVisualizer = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [visitedNodes, setVisitedNodes] = useState([]);
   const [executionHistory, setExecutionHistory] = useState([]);
+  const [dijkstraData, setDijkstraData] = useState(null);
+  const [primData, setPrimData] = useState(null);
+  const [kruskalData, setKruskalData] = useState(null);
 
-  // Parse adjacency matrix with enhanced validation
   const parseAdjacencyMatrix = useCallback((text) => {
     try {
-      if (typeof text !== 'string') {
-        throw new Error('El input debe ser un texto');
-      }
-
-      const lines = text
-        .trim()
-        .split('\n')
-        .filter(line => line.trim().length > 0);
-
-      if (lines.length === 0) {
-        throw new Error('El archivo está vacío');
-      }
-
-      // Check if first line contains letters (header row)
+      if (typeof text !== 'string') throw new Error('El input debe ser un texto');
+      const lines = text.trim().split('\n').filter(line => line.trim().length > 0);
+      if (lines.length === 0) throw new Error('El archivo está vacío');
       const firstLineParts = lines[0].trim().split(/\s+/).filter(Boolean);
       const hasLetterHeaders = /[A-Za-z]/.test(firstLineParts[0]);
-
       if (hasLetterHeaders) {
-        // Parse matrix with letter headers
         const nodeLabels = firstLineParts.slice(0);
         const matrix = [];
-
         for (let i = 1; i < lines.length; i++) {
           const values = lines[i].trim().split(/\s+/).filter(Boolean);
-          const rowLabel = values[0];
-
-          if (rowLabel !== nodeLabels[i - 1]) {
-            throw new Error(`Encabezado de fila no coincide: esperado ${nodeLabels[i - 1]}, obtenido ${rowLabel}`);
-          }
-
-          const rowValues = values.slice(1).map((val, j) => {
+          if (values[0] !== nodeLabels[i - 1]) throw new Error(`Encabezado de fila no coincide: esperado ${nodeLabels[i - 1]}, obtenido ${values[0]}`);
+          const rowValues = values.slice(1).map(val => {
             const num = Number(val);
-            if (isNaN(num)) {
-              throw new Error(`Valor no numérico en fila ${i + 1}, columna ${j + 1}: ${val}`);
-            }
+            if (isNaN(num)) throw new Error(`Valor no numérico en fila ${i + 1}`);
             return num;
           });
-
           matrix.push(rowValues);
         }
-
         const n = matrix.length;
-        if (n === 0 || !matrix.every(row => row.length === n)) {
-          throw new Error('La matriz de adyacencia debe ser cuadrada');
-        }
-
+        if (n === 0 || !matrix.every(row => row.length === n)) throw new Error('La matriz de adyacencia debe ser cuadrada');
         return { matrix, nodeLabels };
       } else {
-        // Parse simple numeric matrix
-        const matrix = lines.map((line, i) => {
-          const values = line.trim().split(/\s+/).filter(Boolean);
-          return values.map((val, j) => {
-            const num = Number(val);
-            if (isNaN(num)) {
-              throw new Error(`Valor no numérico en fila ${i + 1}, columna ${j + 1}: ${val}`);
-            }
-            return num;
-          });
-        });
-
+        const matrix = lines.map(line => line.trim().split(/\s+/).map(Number));
         const n = matrix.length;
-        if (n === 0 || !matrix.every(row => row.length === n)) {
-          throw new Error('La matriz de adyacencia debe ser cuadrada');
-        }
-
+        if (n === 0 || !matrix.every(row => row.length === n)) throw new Error('La matriz de adyacencia debe ser cuadrada');
         return { matrix, nodeLabels: Array.from({ length: n }, (_, i) => i.toString()) };
       }
     } catch (error) {
@@ -92,29 +53,20 @@ const GraphVisualizer = () => {
     }
   }, []);
 
-  // Handle file upload
   const handleFileUpload = useCallback((e) => {
     try {
       setError(null);
       const file = e.target.files[0];
-      
       if (!file) return;
-      
-      if (!file.name.endsWith('.txt')) {
-        throw new Error('Solo se aceptan archivos .txt');
-      }
+      if (!file.name.endsWith('.txt')) throw new Error('Solo se aceptan archivos .txt');
 
       const reader = new FileReader();
       reader.onload = (event) => {
         try {
           const content = event.target.result;
-          if (typeof content !== 'string') {
-            throw new Error('Error al leer el contenido del archivo');
-          }
-
+          if (typeof content !== 'string') throw new Error('Error al leer el contenido del archivo');
           const parsedData = parseAdjacencyMatrix(content);
           if (!parsedData) return;
-
           setGraphInput(content);
           setMatrix(parsedData.matrix);
           setNodeLabels(parsedData.nodeLabels);
@@ -124,75 +76,55 @@ const GraphVisualizer = () => {
           setVisitedNodes([]);
           setExecutionHistory([]);
           setStartNode(0);
+          setDijkstraData(null);
+          setPrimData(null);
+          setKruskalData(null);
         } catch (err) {
           setError(err.message);
         }
       };
-      
-      reader.onerror = () => {
-        throw new Error('Error al leer el archivo');
-      };
-      
+      reader.onerror = () => { throw new Error('Error al leer el archivo'); };
       reader.readAsText(file);
     } catch (error) {
       setError(error.message);
     }
   }, [parseAdjacencyMatrix]);
 
-  // Calculate node positions
   const calculateNodePositions = useCallback((nodeCount) => {
     try {
       if (!nodeCount || nodeCount <= 0) return;
-
       const containerSize = 600;
       const center = containerSize / 2;
       const radius = Math.min(200, 25 * nodeCount);
       const positions = [];
-      
       for (let i = 0; i < nodeCount; i++) {
         const angle = (i * 2 * Math.PI) / nodeCount - Math.PI / 2;
-        positions.push({
-          x: center + radius * Math.cos(angle),
-          y: center + radius * Math.sin(angle)
-        });
+        positions.push({ x: center + radius * Math.cos(angle), y: center + radius * Math.sin(angle) });
       }
-      
       setNodePositions(positions);
     } catch (error) {
       setError('Error al calcular posiciones de nodos');
     }
   }, []);
 
-  // Run algorithm
   const handleRunAlgorithm = async () => {
     try {
-      if (!matrix || matrix.length === 0) {
-        throw new Error('No hay matriz válida cargada');
-      }
-
-      if (!selectedAlgorithm) {
-        throw new Error('Selecciona un algoritmo primero');
-      }
-
-      if (startNode < 0 || startNode >= matrix.length) {
-        throw new Error(`Nodo inicial debe estar entre 0 y ${matrix.length - 1}`);
-      }
-
+      if (!matrix || matrix.length === 0) throw new Error('No hay matriz válida cargada');
+      if (!selectedAlgorithm) throw new Error('Selecciona un algoritmo primero');
+      if (startNode < 0 || startNode >= matrix.length) throw new Error(`Nodo inicial debe estar entre 0 y ${matrix.length - 1}`);
       setIsLoading(true);
       setError(null);
       setCurrentStep(0);
       setVisitedNodes([]);
       setExecutionHistory([]);
+      setDijkstraData(null);
+      setPrimData(null);
+      setKruskalData(null);
 
       const response = await fetch(`http://localhost:5000/run_${selectedAlgorithm}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          matrix: matrix,
-          start: startNode,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ matrix: matrix, start: startNode })
       });
 
       if (!response.ok) {
@@ -201,27 +133,52 @@ const GraphVisualizer = () => {
       }
 
       const data = await response.json();
-      
-      if (!data.result && !data.steps) {
-        throw new Error('Formato de respuesta inválido del servidor');
+
+      if (selectedAlgorithm === 'dijkstra' && data.distances && data.steps && data.paths) {
+        setSteps(data.steps.map((nodeIndex, index) => `Paso ${index + 1}: Visitar nodo ${nodeLabels[nodeIndex] || nodeIndex}`));
+        setVisitedNodes(data.steps);
+        setExecutionHistory(data.steps.map((node, index) => ({
+          step: index,
+          currentNode: node,
+          visitedNodes: data.steps.slice(0, index + 1)
+        })));
+        setDijkstraData({
+          distances: data.distances,
+          paths: data.paths
+        });
+      } else if (selectedAlgorithm === 'prim' && data.mst && Array.isArray(data.mst)) {
+        setSteps(
+          data.mst.map(
+            (edge, idx) =>
+              `Paso ${idx + 1}: Agrega arista ${nodeLabels[edge.from] || edge.from} → ${nodeLabels[edge.to] || edge.to} (peso ${edge.weight})`
+          )
+        );
+        setPrimData({
+          mst: data.mst,
+          totalWeight: data.totalWeight
+        });
+      } else if (selectedAlgorithm === 'kruskal' && data.mst && Array.isArray(data.mst)) {
+        setSteps(
+          data.mst.map(
+            (edge, idx) =>
+              `Paso ${idx + 1}: Agrega arista ${nodeLabels[edge.from] || edge.from} → ${nodeLabels[edge.to] || edge.to} (peso ${edge.weight})`
+          )
+        );
+        setKruskalData({
+          mst: data.mst,
+          totalWeight: data.totalWeight
+        });
+      } else {
+        const result = data.result || data.steps;
+        if (!Array.isArray(result)) throw new Error('El resultado debe ser un array');
+        setSteps(result.map((nodeIndex, index) => `Paso ${index + 1}: Visitar nodo ${nodeLabels[nodeIndex] || nodeIndex}`));
+        setVisitedNodes(result);
+        setExecutionHistory(result.map((node, index) => ({
+          step: index,
+          currentNode: node,
+          visitedNodes: result.slice(0, index + 1)
+        })));
       }
-
-      const result = data.result || data.steps;
-      if (!Array.isArray(result)) {
-        throw new Error('El resultado debe ser un array');
-      }
-
-      const formattedSteps = result.map((nodeIndex, index) =>
-        `Paso ${index + 1}: Visitar nodo ${nodeLabels[nodeIndex] || nodeIndex}`
-      );
-
-      setSteps(formattedSteps);
-      setVisitedNodes(result);
-      setExecutionHistory(result.map((node, index) => ({
-        step: index,
-        currentNode: node,
-        visitedNodes: result.slice(0, index + 1)
-      })));
     } catch (error) {
       setError(error.message);
       console.error('Error en handleRunAlgorithm:', error);
@@ -230,37 +187,19 @@ const GraphVisualizer = () => {
     }
   };
 
-  // Navigation functions
-  const handleNextStep = () => {
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
+  const handleNextStep = () => { if (currentStep < steps.length - 1) setCurrentStep(currentStep + 1); };
+  const handlePrevStep = () => { if (currentStep > 0) setCurrentStep(currentStep - 1); };
+  const jumpToStep = (stepIndex) => { if (stepIndex >= 0 && stepIndex < steps.length) setCurrentStep(stepIndex); };
+  const getCurrentNode = () => (visitedNodes.length === 0 || currentStep >= visitedNodes.length) ? null : visitedNodes[currentStep];
 
-  const handlePrevStep = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
-
-  const jumpToStep = (stepIndex) => {
-    if (stepIndex >= 0 && stepIndex < steps.length) {
-      setCurrentStep(stepIndex);
-    }
-  };
-
-  // Get current node information
-  const getCurrentNode = () => {
-    if (visitedNodes.length === 0 || currentStep >= visitedNodes.length) return null;
-    return visitedNodes[currentStep];
-  };
-
-  // Reset when matrix changes
   useEffect(() => {
     setSteps([]);
     setCurrentStep(0);
     setVisitedNodes([]);
     setExecutionHistory([]);
+    setDijkstraData(null);
+    setPrimData(null);
+    setKruskalData(null);
   }, [matrix]);
 
   return (
@@ -348,7 +287,6 @@ const GraphVisualizer = () => {
           <h3>Visualización del Grafo</h3>
           <div className="graph-visualization">
             <svg width="100%" height="400" viewBox="0 0 600 600">
-              {/* Render edges */}
               {matrix.map((row, i) =>
                 row.slice(i + 1).map((weight, j) => {
                   const actualJ = i + 1 + j;
@@ -370,19 +308,14 @@ const GraphVisualizer = () => {
                 })
               ).flat().filter(Boolean)}
 
-              {/* Render nodes with dynamic coloring */}
               {nodePositions.map((pos, i) => {
                 const isCurrentNode = getCurrentNode() === i;
                 const wasVisited = visitedNodes.slice(0, currentStep).includes(i);
-                
+
                 let fillColor;
-                if (isCurrentNode) {
-                  fillColor = "#ff5722"; // Current node - orange
-                } else if (wasVisited) {
-                  fillColor = "#4caf50"; // Visited nodes - green
-                } else {
-                  fillColor = "#0071e3"; // Unvisited nodes - blue
-                }
+                if (isCurrentNode) fillColor = "#ff5722";
+                else if (wasVisited) fillColor = "#4caf50";
+                else fillColor = "#0071e3";
 
                 return (
                   <g key={`node-${i}`}>
@@ -410,16 +343,14 @@ const GraphVisualizer = () => {
               })}
             </svg>
           </div>
-          {/* Current node display */}
           <div className="current-node-display">
             {getCurrentNode() !== null && (
               <p>Nodo actual: <strong>{nodeLabels[getCurrentNode()] || getCurrentNode()}</strong></p>
             )}
           </div>
-          {/* Step navigation controls */}
           {steps.length > 0 && (
             <div className="step-navigation">
-              <button 
+              <button
                 onClick={handlePrevStep}
                 disabled={currentStep === 0 || isLoading}
                 className="nav-button prev-button"
@@ -434,7 +365,7 @@ const GraphVisualizer = () => {
                 onChange={(e) => jumpToStep(parseInt(e.target.value))}
                 className="step-slider"
               />
-              <button 
+              <button
                 onClick={handleNextStep}
                 disabled={currentStep === steps.length - 1 || isLoading}
                 className="nav-button next-button"
@@ -485,29 +416,29 @@ const GraphVisualizer = () => {
           {steps.length > 0 && (
             <>
               <h3>Resultados del {selectedAlgorithm.toUpperCase()}</h3>
-              
               <div className="algorithm-steps">
                 <h4>Orden de visita:</h4>
                 <div className="visit-order">
                   {steps.slice(0, currentStep + 1).map(step => {
-                    const node = step.split(':')[1].trim().split(' ')[2];
-                    return node;
+                    if (selectedAlgorithm === 'prim' || selectedAlgorithm === 'kruskal') {
+                      return step.split(':')[1].trim().split('(')[0];
+                    } else {
+                      const node = step.split(':')[1].trim().split(' ')[2];
+                      return node;
+                    }
                   }).join(' → ')}
                 </div>
                 <h4>Detalle de pasos:</h4>
                 <ol className="steps-list">
                   {steps.map((step, idx) => (
-                    <li 
+                    <li
                       key={idx}
                       className={idx === currentStep ? 'active-step' : ''}
                       onClick={() => jumpToStep(idx)}
                     >
                       <span className="step-number">{idx + 1}.</span>
                       <span className="step-description">{step}</span>
-                      
                     </li>
-
-                    
                   ))}
                 </ol>
               </div>
@@ -515,6 +446,113 @@ const GraphVisualizer = () => {
           )}
         </div>
       </div>
+
+      {/* --- Tabla de Dijkstra como div independiente, SIEMPRE DEBAJO --- */}
+      {selectedAlgorithm === 'dijkstra' && dijkstraData && (
+        <div className="dijkstra-table-section" style={{
+          marginTop: '36px',
+          background: '#1a1a1a',
+          borderRadius: '10px',
+          padding: '24px',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.3)'
+        }}>
+          <h3>Tabla de Dijkstra</h3>
+          <table className="dijkstra-table">
+            <thead>
+              <tr>
+                <th>Nodo</th>
+                <th>Distancia mínima</th>
+                <th>Camino más corto</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.keys(dijkstraData.distances).map((node) => (
+                <tr key={node}>
+                  <td>{nodeLabels[node] || node}</td>
+                  <td>
+                    {dijkstraData.distances[node] === Infinity
+                      ? '∞'
+                      : dijkstraData.distances[node]}
+                  </td>
+                  <td>
+                    {dijkstraData.paths[node] && dijkstraData.paths[node].length > 0
+                      ? dijkstraData.paths[node].map(p => nodeLabels[p] || p).join(' → ')
+                      : '-'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* --- Tabla de Prim como div independiente, SIEMPRE DEBAJO --- */}
+      {selectedAlgorithm === 'prim' && primData && (
+        <div className="prim-table-section" style={{
+          marginTop: '36px',
+          background: '#1a1a1a',
+          borderRadius: '10px',
+          padding: '24px',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.3)'
+        }}>
+          <h3>Árbol de Expansión Mínima (Prim)</h3>
+          <table className="prim-table">
+            <thead>
+              <tr>
+                <th>Desde</th>
+                <th>Hasta</th>
+                <th>Peso</th>
+              </tr>
+            </thead>
+            <tbody>
+              {primData.mst.map((edge, idx) => (
+                <tr key={idx}>
+                  <td>{nodeLabels[edge.from] || edge.from}</td>
+                  <td>{nodeLabels[edge.to] || edge.to}</td>
+                  <td>{edge.weight}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div style={{ color: '#4caf50', fontWeight: 'bold', marginTop: '16px', fontSize: '1.2rem' }}>
+            Peso total del árbol: {primData.totalWeight}
+          </div>
+        </div>
+      )}
+
+      {/* --- Tabla de Kruskal como div independiente, SIEMPRE DEBAJO --- */}
+      {selectedAlgorithm === 'kruskal' && kruskalData && (
+        <div className="kruskal-table-section" style={{
+          marginTop: '36px',
+          background: '#1a1a1a',
+          borderRadius: '10px',
+          padding: '24px',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.3)'
+        }}>
+          <h3>Árbol de Expansión Mínima (Kruskal)</h3>
+          <table className="kruskal-table">
+            <thead>
+              <tr>
+                <th>Desde</th>
+                <th>Hasta</th>
+                <th>Peso</th>
+              </tr>
+            </thead>
+            <tbody>
+              {kruskalData.mst.map((edge, idx) => (
+                <tr key={idx}>
+                  <td>{nodeLabels[edge.from] || edge.from}</td>
+                  <td>{nodeLabels[edge.to] || edge.to}</td>
+                  <td>{edge.weight}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div style={{ color: '#4caf50', fontWeight: 'bold', marginTop: '16px', fontSize: '1.2rem' }}>
+            Peso total del árbol: {kruskalData.totalWeight}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
