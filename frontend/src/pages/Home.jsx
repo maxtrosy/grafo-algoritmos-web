@@ -107,6 +107,9 @@ const GraphVisualizer = () => {
     }
   }, []);
 
+
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
+
   const handleRunAlgorithm = async () => {
     try {
       if (!matrix || matrix.length === 0) throw new Error('No hay matriz válida cargada');
@@ -121,10 +124,19 @@ const GraphVisualizer = () => {
       setPrimData(null);
       setKruskalData(null);
 
-      const response = await fetch(`http://localhost:5000/run_${selectedAlgorithm}`, {
+      // Endpoint correcto
+      const endpoint = `${API_BASE_URL}/run_${selectedAlgorithm}`;
+
+      // Payload: si es prim o kruskal, no enviamos startNode porque no lo usan.
+      const payload = { matrix };
+      if (!['prim', 'kruskal'].includes(selectedAlgorithm)) {
+        payload.start = startNode;
+      }
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ matrix: matrix, start: startNode })
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
@@ -134,6 +146,7 @@ const GraphVisualizer = () => {
 
       const data = await response.json();
 
+      // Procesar respuestas según algoritmo
       if (selectedAlgorithm === 'dijkstra' && data.distances && data.steps && data.paths) {
         setSteps(data.steps.map((nodeIndex, index) => `Paso ${index + 1}: Visitar nodo ${nodeLabels[nodeIndex] || nodeIndex}`));
         setVisitedNodes(data.steps);
@@ -146,29 +159,26 @@ const GraphVisualizer = () => {
           distances: data.distances,
           paths: data.paths
         });
-      } else if (selectedAlgorithm === 'prim' && data.mst && Array.isArray(data.mst)) {
+      } else if ((selectedAlgorithm === 'prim' || selectedAlgorithm === 'kruskal') && data.mst && Array.isArray(data.mst)) {
         setSteps(
           data.mst.map(
             (edge, idx) =>
               `Paso ${idx + 1}: Agrega arista ${nodeLabels[edge.from] || edge.from} → ${nodeLabels[edge.to] || edge.to} (peso ${edge.weight})`
           )
         );
-        setPrimData({
-          mst: data.mst,
-          totalWeight: data.totalWeight
-        });
-      } else if (selectedAlgorithm === 'kruskal' && data.mst && Array.isArray(data.mst)) {
-        setSteps(
-          data.mst.map(
-            (edge, idx) =>
-              `Paso ${idx + 1}: Agrega arista ${nodeLabels[edge.from] || edge.from} → ${nodeLabels[edge.to] || edge.to} (peso ${edge.weight})`
-          )
-        );
-        setKruskalData({
-          mst: data.mst,
-          totalWeight: data.totalWeight
-        });
+        if (selectedAlgorithm === 'prim') {
+          setPrimData({
+            mst: data.mst,
+            totalWeight: data.totalWeight
+          });
+        } else {
+          setKruskalData({
+            mst: data.mst,
+            totalWeight: data.totalWeight
+          });
+        }
       } else {
+        // Para BFS, DFS u otros resultados
         const result = data.result || data.steps;
         if (!Array.isArray(result)) throw new Error('El resultado debe ser un array');
         setSteps(result.map((nodeIndex, index) => `Paso ${index + 1}: Visitar nodo ${nodeLabels[nodeIndex] || nodeIndex}`));
