@@ -2,7 +2,6 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import re
 
-# Import algorithm implementations
 from algorithms.bfs import bfs
 from algorithms.dfs import dfs
 from algorithms.dijkstra import dijkstra
@@ -14,28 +13,22 @@ CORS(app)
 
 def parse_letter_matrix(data):
     """Parse a letter-labeled adjacency matrix into a numerical matrix"""
-    # Extract the header row to get node order
     header = data.strip().split('\n')[0].split()
-    nodes = header[1:]  # Skip the first empty cell
+    nodes = header[1:]  
     
-    # Create node to index mapping
     node_index = {node: idx for idx, node in enumerate(nodes)}
     
-    # Initialize empty matrix
     size = len(nodes)
     matrix = [[0] * size for _ in range(size)]
     
-    # Parse each row
     for line in data.strip().split('\n')[1:]:
         parts = line.split()
         if not parts:
             continue
             
-        # First element is the row label
         row_node = parts[0]
         row_idx = node_index[row_node]
         
-        # Remaining elements are the weights
         for col_idx, weight in enumerate(parts[1:]):
             if weight == '0':
                 matrix[row_idx][col_idx] = 0
@@ -72,7 +65,6 @@ def run_bfs():
         if not data or "matrix" not in data:
             return jsonify({"error": "Missing 'matrix' in request"}), 400
 
-        # Check if matrix is in letter format
         if isinstance(data["matrix"], str) and re.match(r'^[A-Z]', data["matrix"].strip().split('\n')[0].split()[0]):
             matrix, nodes = parse_letter_matrix(data["matrix"])
             start = convert_start_node(data.get("start", nodes[0]), nodes)
@@ -109,7 +101,6 @@ def run_dfs():
         if not data or "matrix" not in data:
             return jsonify({"error": "Missing 'matrix' in request"}), 400
 
-        # Check if matrix is in letter format
         if isinstance(data["matrix"], str) and re.match(r'^[A-Z]', data["matrix"].strip().split('\n')[0].split()[0]):
             matrix, nodes = parse_letter_matrix(data["matrix"])
             start = convert_start_node(data.get("start", nodes[0]), nodes)
@@ -158,7 +149,6 @@ def run_kruskal():
         if not data or "matrix" not in data:
             return jsonify({"error": "Missing 'matrix' in request"}), 400
 
-        # Procesa los nodos y la matriz
         if isinstance(data["matrix"], str) and re.match(r'^[A-Za-z]', data["matrix"].strip().split('\n')[0].split()[0]):
             matrix, node_labels = parse_letter_matrix(data["matrix"])
         else:
@@ -167,7 +157,6 @@ def run_kruskal():
 
         validate_graph_matrix(matrix)
 
-        # Convierte la matriz a lista de aristas para Kruskal
         edges = []
         n = len(matrix)
         for i in range(n):
@@ -237,7 +226,7 @@ def run_prim():
             "algorithm": "Prim",
             "start_node": node_labels[start],
             "node_labels": node_labels,
-            "result": []  # <= Añade esto para evitar error en el front
+            "result": []  
         })
 
     except ValueError as e:
